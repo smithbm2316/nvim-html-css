@@ -2,13 +2,38 @@ local Source = {}
 local cmp_config = require("cmp.config")
 local utils = require("html-css.utils")
 
+---@param file_extensions string[]
+---@return string[]
+local get_cwd_files = function(file_extensions)
+	---@type string[]
+	local stylesheet_paths = {}
+	for _, ft in ipairs(file_extensions) do
+		vim.tbl_extend(
+			"error",
+			stylesheet_paths,
+			vim.split(vim.fn.globpath(vim.fn.getcwd(), "**/*." .. ft), "\n")
+		)
+	end
+	return stylesheet_paths
+end
+
+-- TODO: set up file event watcher to update this regularly
+
 function Source:before_init()
-	local style_sheets_classes =
-			require("html-css.style_sheets").init(self.user_config.option.style_sheets)
+	local files_to_load = self.user_config.option.style_sheets or {}
+	local css_file_extensions = self.user_config.option.css_file_extensions
+		or { "css", "sass", "scss", "less" }
+
+	if self.user_config.option.should_load_cwd_files then
+		vim.tbl_extend("error", files_to_load, get_cwd_files(css_file_extensions))
+	end
+
+	local style_sheets_classes = require("html-css.style_sheets").init(files_to_load)
 	if not style_sheets_classes then
-		vim.notify("nvim-html-css can't find style_sheets config.", "error")
+		vim.notify("nvim-html-css can't find style_sheets config.", vim.log.levels.ERROR)
 		return
 	end
+
 	vim.notify("Your remote styles get set, you can use them.")
 	for _, class in ipairs(style_sheets_classes) do
 		table.insert(self.items, class)
@@ -50,18 +75,18 @@ function Source:is_available()
 		local className_start_pos, className_end_pos = line:find('className%s-=%s-".-"')
 
 		if
-				(
-					class_start_pos
-					and class_end_pos
-					and cursor_pos[2] > class_start_pos
-					and cursor_pos[2] <= class_end_pos
-				)
-				or (
-					className_start_pos
-					and className_end_pos
-					and cursor_pos[2] > className_start_pos
-					and cursor_pos[2] <= className_end_pos
-				)
+			(
+				class_start_pos
+				and class_end_pos
+				and cursor_pos[2] > class_start_pos
+				and cursor_pos[2] <= class_end_pos
+			)
+			or (
+				className_start_pos
+				and className_end_pos
+				and cursor_pos[2] > className_start_pos
+				and cursor_pos[2] <= className_end_pos
+			)
 		then
 			return true
 		else

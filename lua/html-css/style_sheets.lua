@@ -16,6 +16,7 @@ M.get_remote_styles = a.wrap(function(url, cb)
 	})
 end, 2)
 
+---@return string | nil
 function M.get_local_path(path)
 	local file_path = p:new({ path, sep = "/" })
 	if not file_path:exists() then
@@ -25,10 +26,13 @@ function M.get_local_path(path)
 	return file_path:absolute()
 end
 
+---@param styles string[]
+---@return string[] | nil
 function M.init(styles)
 	if not styles then
 		return
 	end
+
 	for _, path in ipairs(styles) do
 		if path:match(isRemote) then
 			a.run(function()
